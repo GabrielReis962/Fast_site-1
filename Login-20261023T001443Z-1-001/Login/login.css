@@ -1,0 +1,51 @@
+* { box-sizing: border-box; }
+body {
+    display: grid;
+    min-height: 100vh;
+    margin: 0;
+    padding: 24px 16px;
+    place-items: center;
+    background: #233428;
+    color: #202820;
+    font-family: Arial, sans-serif;
+}
+.auth-card {
+    width: min(420px, 100%);
+    padding: 32px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 30px #15201518;
+}
+h1 { margin: 0 0 8px; color: #315c3b; }
+.intro { margin: 0 0 20px; color: #687168; line-height: 1.5; }
+label { display: block; margin: 16px 0 6px; font-size: 14px; }
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #141d14;
+    border-radius: 6px;
+    font: inherit;
+}
+input:focus, textarea:focus { border-color: #477b50; outline: 2px solid #477b5030; }
+button {
+    width: 100%;
+    margin-top: 18px;
+    padding: 12px;
+    border: 0;
+    border-radius: 6px;
+    background: #315c3b;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+}
+button:hover { background: #254a2e; }
+button:disabled { cursor: wait; opacity: .7; }
+.secondary-button { margin-top: 10px; background: transparent; color: #315c3b; }
+.secondary-button:hover { background: #eef3ee; }
+.message { min-height: 20px; margin: 12px 0 0; color: #a12828; font-size: 14px; }
+.success-message { color: #26723a; }
+[hidden] { display: none !important; }
+
+@media (max-width: 420px) {
+    .auth-card { padding: 24px; }
+}

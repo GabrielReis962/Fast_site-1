@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Acesso | Cadastro de clientes</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <main class="auth-card">
+        <h1 id="form-title">Bem-vindo</h1>
+        <p class="intro" id="form-description">Entre na sua conta para acessar os cadastros.</p>
+
+        <form id="login-form">
+            <label for="username">E-mail</label>
+            <input id="username" name="username" type="email" autocomplete="username" maxlength="80" required>
+            <label for="password">Senha</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <p id="login-message" class="message" role="alert" aria-live="polite"></p>
+            <button id="login-submit" type="submit">Entrar</button>
+        </form>
+
+        <form id="register-form" hidden>
+            <label for="first-name">Nome</label>
+            <input id="first-name" name="firstName" autocomplete="given-name" maxlength="80" required>
+            <label for="last-name">Sobrenome</label>
+            <input id="last-name" name="lastName" autocomplete="family-name" maxlength="80" required>
+            <label for="new-username">E-mail</label>
+            <input id="new-username" name="username" type="email" autocomplete="email" maxlength="80" required>
+            <label for="new-password">Senha (mínimo de 8 caracteres)</label>
+            <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            <p id="register-message" class="message" role="alert" aria-live="polite"></p>
+            <button id="register-submit" type="submit">Criar conta</button>
+        </form>
+
+        <button id="toggle-mode" class="secondary-button" type="button">Ainda não tenho uma conta</button>
+    </main>
+
+<script>
+    const BASE_URL = "http://127.0.0.1:8080";
+
+    const loginForm = document.querySelector("#login-form");
+    const registerForm = document.querySelector("#register-form");
+    const title = document.querySelector("#form-title");
+    const description = document.querySelector("#form-description");
+    const toggleButton = document.querySelector("#toggle-mode");
+    let registering = false;
+
+    toggleButton.addEventListener("click", () => {
+        registering = !registering;
+        loginForm.hidden = registering;
+        registerForm.hidden = !registering;
+        title.textContent = registering ? "Criar conta" : "Bem-vindo";
+        description.textContent = registering
+            ? "Informe seu nome, sobrenome e crie suas credenciais."
+            : "Entre na sua conta para acessar os cadastros.";
+        toggleButton.textContent = registering ? "Já tenho uma conta" : "Ainda não tenho uma conta";
+        document.querySelector("#login-message").textContent = "";
+        document.querySelector("#login-message").classList.remove("success-message");
+        document.querySelector("#register-message").textContent = "";
+    });
+
+    loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = document.querySelector("#login-message");
+        const button = document.querySelector("#login-submit");
+        message.textContent = "";
+        button.disabled = true;
+
+        const email = document.querySelector("#username").value.trim();
+        const password = document.querySelector("#password").value;
+
+        try {
+            const response = await fetch(`${BASE_URL}/api/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    usuario: email,
+                    senha: password,
+                }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                message.textContent = result.error || "Não foi possível entrar.";
+                return;
+            }
+            message.textContent = "Login realizado com sucesso!";
+            message.classList.add("success-message");
+            window.location.assign("principal.html");
+        } catch (error) {
+            console.error("Erro ao acessar o servidor:", error);
+            message.textContent = "Não foi possível conectar ao servidor. Tente novamente.";
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    registerForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = document.querySelector("#register-message");
+        const button = document.querySelector("#register-submit");
+        message.textContent = "";
+        button.disabled = true;
+
+        // Leitura direta dos elementos do formulário de registo
+        const firstName = document.querySelector("#first-name").value.trim();
+        const lastName = document.querySelector("#last-name").value.trim();
+        const email = document.querySelector("#new-username").value.trim();
+        const password = document.querySelector("#new-password").value;
+
+        try {
+            const response = await fetch(`${BASE_URL}/api/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    nome: `${firstName} ${lastName}`,
+                    usuario: email,
+                    senha: password
+                }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                message.textContent = result.error || "Não foi possível criar a conta.";
+                return;
+            }
+
+            // Preenche o formulário de login com o e-mail recém-registado e alterna a visualização
+            document.querySelector("#username").value = email;
+            document.querySelector("#password").value = "";
+            registerForm.reset();
+            toggleButton.click();
+            
+            const loginMessage = document.querySelector("#login-message");
+            loginMessage.textContent = "Conta criada com sucesso. Faça login.";
+            loginMessage.classList.add("success-message");
+
+        } catch (error) {
+            console.error("Erro ao criar conta:", error);
+            message.textContent = "Não foi possível conectar ao servidor. Tente novamente.";
+        } finally {
+            button.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>

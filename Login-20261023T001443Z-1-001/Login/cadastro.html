@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cadastro de clientes</title>
+    <link rel="stylesheet" href="cadastro.css">
+</head>
+<body>
+    <main class="page">
+        <header class="page-header">
+            <div>
+                <h1>Cadastro de clientes</h1>
+                <p>Cadastre clientes e consulte cada registro salvo.</p>
+            </div>
+            <a href="principal.html">Voltar</a>
+        </header>
+
+        <section class="panel">
+            <h2>Novo cadastro</h2>
+            <form id="client-form">
+                <div class="form-grid">
+                    <div class="field field-wide">
+                        <label for="name">Nome</label>
+                        <input id="name" name="name" maxlength="120" autocomplete="name" required>
+                    </div>
+                    <div class="field">
+                        <label for="phone">Telefone</label>
+                        <input id="phone" name="phone" type="tel" maxlength="30" autocomplete="tel" required>
+                    </div>
+                    <div class="field">
+                        <label for="email">E-mail</label>
+                        <input id="email" name="email" type="email" maxlength="254" autocomplete="email" required>
+                    </div>
+                    <div class="field">
+                        <label for="cpf">CPF</label>
+                        <input id="cpf" name="cpf" inputmode="numeric" maxlength="14" autocomplete="off" placeholder="000.000.000-00" required>
+                    </div>
+                    <div class="field field-wide">
+                        <label for="address">Endereço completo</label>
+                        <input id="address" name="address" maxlength="200" autocomplete="street-address" placeholder="Rua, número, bairro e cidade" required>
+                    </div>
+                    <div class="field field-wide">
+                        <label for="observation">Observação</label>
+                        <textarea id="observation" name="observation" rows="3" maxlength="1000" placeholder="Informações adicionais (opcional)"></textarea>
+                    </div>
+                </div>
+                <p id="form-message" class="message" role="status" aria-live="polite"></p>
+                <button id="save-button" type="submit">Salvar cadastro</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>Cadastros salvos (<span id="client-count">0</span>)</h2>
+            <p id="list-message" class="message" role="status" aria-live="polite"></p>
+            <ul id="client-list" class="client-list"></ul>
+        </section>
+
+        <section id="client-details" class="panel" hidden aria-live="polite">
+            <h2>Cadastro recuperado</h2>
+            <dl id="details-list" class="details-list"></dl>
+        </section>
+    </main>
+<script>
+    const BASE_URL = "http://127.0.0.1:8080";
+    const form = document.querySelector("#client-form");
+    const formMessage = document.querySelector("#form-message");
+    const listMessage = document.querySelector("#list-message");
+
+    async function apiRequest(url, options = {}) {
+        const response = await fetch(`${BASE_URL}${url}`, {
+            ...options,
+            credentials: "include",
+            headers: {
+                ...(options.body ? { "Content-Type": "application/json" } : {}),
+                ...options.headers,
+            },
+        });
+        const result = await response.json();
+        if (response.status === 401) {
+            window.location.replace("Login.html");
+            throw new Error(result.error || "Faça login para continuar.");
+        }
+        if (!response.ok) throw new Error(result.error || "Não foi possível concluir a operação.");
+        return result;
+    }
+
+    async function loadClients() {
+        listMessage.textContent = "";
+        try {
+            const { clients } = await apiRequest("/api/clients");
+            document.querySelector("#client-count").textContent = clients.length;
+            const list = document.querySelector("#client-list");
+            list.replaceChildren();
+
+            if (clients.length === 0) {
+                const empty = document.createElement("li");
+                empty.className = "empty-state";
+                empty.textContent = "Nenhum cadastro salvo.";
+                list.append(empty);
+                return;
+            }
+
+            clients.forEach((client) => {
+                const item = document.createElement("li");
+                const name = document.createElement("span");
+                const viewButton = document.createElement("button");
+                name.textContent = client.name;
+                viewButton.type = "button";
+                viewButton.textContent = "Ver cadastro";
+                viewButton.addEventListener("click", () => loadClient(client.id));
+                item.append(name, viewButton);
+                list.append(item);
+            });
+        } catch (error) {
+            console.error("Não foi possível carregar os cadastros:", error);
+            listMessage.textContent = error.message;
+        }
+    }
+
+    async function loadClient(id) {
+        listMessage.textContent = "";
+        try {
+            const { client } = await apiRequest(`/api/clients/${encodeURIComponent(id)}`);
+            const details = document.querySelector("#details-list");
+            details.replaceChildren();
+            [
+                ["Nome", client.name],
+                ["Telefone", client.phone],
+                ["E-mail", client.email],
+                ["CPF", client.cpf],
+                ["Endereço", client.address],
+                ["Obs.", client.observation || "—"],
+            ].forEach(([label, value]) => {
+                const term = document.createElement("dt");
+                const description = document.createElement("dd");
+                term.textContent = label;
+                description.textContent = value;
+                details.append(term, description);
+            });
+            document.querySelector("#client-details").hidden = false;
+        } catch (error) {
+            console.error("Não foi possível recuperar o cadastro:", error);
+            listMessage.textContent = error.message;
+        }
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        formMessage.className = "message";
+        formMessage.textContent = "";
+        const button = document.querySelector("#save-button");
+        button.disabled = true;
+
+        try {
+            const data = Object.fromEntries(new FormData(form).entries());
+            const result = await apiRequest("/api/clients", {
+                method: "POST",
+                body: JSON.stringify(data),
+            });
+            form.reset();
+            formMessage.textContent = result.message;
+            formMessage.classList.add("success-message");
+            await loadClients();
+        } catch (error) {
+            console.error("Não foi possível salvar o cadastro:", error);
+            formMessage.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    async function loadSession() {
+        try {
+            const response = await fetch(`${BASE_URL}/api/auth/session`, { 
+                cache: "no-store",
+                credentials: "include"
+            });
+            if (!response.ok) {
+                window.location.replace("Login.html");
+                return;
+            }
+            await loadClients();
+        } catch (error) {
+            console.error("Não foi possível verificar a sessão:", error);
+            listMessage.textContent = "Não foi possível conectar ao servidor.";
+        }
+    }
+
+    loadSession();
+</script>
+</body>
+</html>
